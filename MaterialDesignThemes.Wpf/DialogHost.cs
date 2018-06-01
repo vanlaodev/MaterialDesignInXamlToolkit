@@ -190,6 +190,8 @@ namespace MaterialDesignThemes.Wpf
             if (IsOpen)
                 throw new InvalidOperationException("DialogHost is already open.");
 
+            _closeDialogExecutionParameter = null; // fix to prevent dialog return the previous value when unloaded
+
             AssertTargetableContent();
             DialogContent = content;
             _asyncShowOpenedEventHandler = openedEventHandler;
