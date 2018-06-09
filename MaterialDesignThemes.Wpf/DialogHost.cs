@@ -59,6 +59,7 @@ namespace MaterialDesignThemes.Wpf
         private static readonly HashSet<DialogHost> LoadedInstances = new HashSet<DialogHost>();
 
         private readonly ManualResetEvent _asyncShowWaitHandle = new ManualResetEvent(false);
+        private readonly ManualResetEvent _realClosedWaitHandle = new ManualResetEvent(false);
         private DialogOpenedEventHandler _asyncShowOpenedEventHandler;
         private DialogClosingEventHandler _asyncShowClosingEventHandler;
 
@@ -214,6 +215,21 @@ namespace MaterialDesignThemes.Wpf
 
         #endregion
 
+        public static Task<bool> WaitRealClosed(int timeout = 2000)
+        {
+            return WaitRealClosed(null, timeout);
+        }
+
+        public static async Task<bool> WaitRealClosed(object dialogIdentifier, int timeout = 2000)
+        {
+            var targets = LoadedInstances.Where(dh => dialogIdentifier == null || Equals(dh.Identifier, dialogIdentifier)).ToList();
+            if (targets.Any())
+            {
+                return await targets[0].WaitRealClosedInternal(timeout);
+            }
+            return true;
+        }
+
         public DialogHost()
         {
             Loaded += OnLoaded;
@@ -224,7 +240,7 @@ namespace MaterialDesignThemes.Wpf
         }
 
         public static readonly DependencyProperty IdentifierProperty = DependencyProperty.Register(
-            nameof(Identifier), typeof (object), typeof (DialogHost), new PropertyMetadata(default(object)));
+            nameof(Identifier), typeof(object), typeof(DialogHost), new PropertyMetadata(default(object)));
 
         /// <summary>
         /// Identifier which is used in conjunction with <see cref="Show(object)"/> to determine where a dialog should be shown.
@@ -236,7 +252,7 @@ namespace MaterialDesignThemes.Wpf
         }
 
         public static readonly DependencyProperty IsOpenProperty = DependencyProperty.Register(
-            nameof(IsOpen), typeof (bool), typeof (DialogHost), new FrameworkPropertyMetadata(default(bool), FrameworkPropertyMetadataOptions.BindsTwoWayByDefault, IsOpenPropertyChangedCallback));
+            nameof(IsOpen), typeof(bool), typeof(DialogHost), new FrameworkPropertyMetadata(default(bool), FrameworkPropertyMetadataOptions.BindsTwoWayByDefault, IsOpenPropertyChangedCallback));
 
         private static void IsOpenPropertyChangedCallback(DependencyObject dependencyObject, DependencyPropertyChangedEventArgs dependencyPropertyChangedEventArgs)
         {
@@ -247,7 +263,7 @@ namespace MaterialDesignThemes.Wpf
             VisualStateManager.GoToState(dialogHost, dialogHost.SelectState(), !TransitionAssist.GetDisableTransitions(dialogHost));
 
             if (dialogHost.IsOpen)
-            {                
+            {
                 WatchWindowActivation(dialogHost);
                 dialogHost._currentSnackbarMessageQueueUnPauseAction = dialogHost.SnackbarMessageQueue?.Pause();
             }
@@ -267,7 +283,7 @@ namespace MaterialDesignThemes.Wpf
                 // Don't attempt to Invoke if _restoreFocusDialogClose hasn't been assigned yet. Can occur
                 // if the MainWindow has started up minimized. Even when Show() has been called, this doesn't
                 // seem to have been set.
-                dialogHost.Dispatcher.InvokeAsync(() => dialogHost._restoreFocusDialogClose?.Focus(), DispatcherPriority.Input);                
+                dialogHost.Dispatcher.InvokeAsync(() => dialogHost._restoreFocusDialogClose?.Focus(), DispatcherPriority.Input);
 
                 return;
             }
@@ -306,7 +322,7 @@ namespace MaterialDesignThemes.Wpf
         }
 
         public static readonly DependencyProperty DialogContentProperty = DependencyProperty.Register(
-            nameof(DialogContent), typeof (object), typeof (DialogHost), new PropertyMetadata(default(object)));
+            nameof(DialogContent), typeof(object), typeof(DialogHost), new PropertyMetadata(default(object)));
 
         public object DialogContent
         {
@@ -315,7 +331,7 @@ namespace MaterialDesignThemes.Wpf
         }
 
         public static readonly DependencyProperty DialogContentTemplateProperty = DependencyProperty.Register(
-            nameof(DialogContentTemplate), typeof (DataTemplate), typeof (DialogHost), new PropertyMetadata(default(DataTemplate)));
+            nameof(DialogContentTemplate), typeof(DataTemplate), typeof(DialogHost), new PropertyMetadata(default(DataTemplate)));
 
         public DataTemplate DialogContentTemplate
         {
@@ -324,7 +340,7 @@ namespace MaterialDesignThemes.Wpf
         }
 
         public static readonly DependencyProperty DialogContentTemplateSelectorProperty = DependencyProperty.Register(
-            nameof(DialogContentTemplateSelector), typeof (DataTemplateSelector), typeof (DialogHost), new PropertyMetadata(default(DataTemplateSelector)));
+            nameof(DialogContentTemplateSelector), typeof(DataTemplateSelector), typeof(DialogHost), new PropertyMetadata(default(DataTemplateSelector)));
 
         public DataTemplateSelector DialogContentTemplateSelector
         {
@@ -333,7 +349,7 @@ namespace MaterialDesignThemes.Wpf
         }
 
         public static readonly DependencyProperty DialogContentStringFormatProperty = DependencyProperty.Register(
-            nameof(DialogContentStringFormat), typeof (string), typeof (DialogHost), new PropertyMetadata(default(string)));
+            nameof(DialogContentStringFormat), typeof(string), typeof(DialogHost), new PropertyMetadata(default(string)));
 
         public string DialogContentStringFormat
         {
@@ -351,7 +367,7 @@ namespace MaterialDesignThemes.Wpf
         }
 
         public static readonly DependencyProperty OpenDialogCommandDataContextSourceProperty = DependencyProperty.Register(
-            nameof(OpenDialogCommandDataContextSource), typeof (DialogHostOpenDialogCommandDataContextSource), typeof (DialogHost), new PropertyMetadata(default(DialogHostOpenDialogCommandDataContextSource)));
+            nameof(OpenDialogCommandDataContextSource), typeof(DialogHostOpenDialogCommandDataContextSource), typeof(DialogHost), new PropertyMetadata(default(DialogHostOpenDialogCommandDataContextSource)));
 
         /// <summary>
         /// Defines how a data context is sourced for a dialog if a <see cref="FrameworkElement"/>
@@ -364,7 +380,7 @@ namespace MaterialDesignThemes.Wpf
         }
 
         public static readonly DependencyProperty CloseOnClickAwayProperty = DependencyProperty.Register(
-            "CloseOnClickAway", typeof (bool), typeof (DialogHost), new PropertyMetadata(default(bool)));
+            "CloseOnClickAway", typeof(bool), typeof(DialogHost), new PropertyMetadata(default(bool)));
 
         /// <summary>
         /// Indicates whether the dialog will close if the user clicks off the dialog, on the obscured background.
@@ -376,7 +392,7 @@ namespace MaterialDesignThemes.Wpf
         }
 
         public static readonly DependencyProperty CloseOnClickAwayParameterProperty = DependencyProperty.Register(
-            "CloseOnClickAwayParameter", typeof (object), typeof (DialogHost), new PropertyMetadata(default(object)));
+            "CloseOnClickAwayParameter", typeof(object), typeof(DialogHost), new PropertyMetadata(default(object)));
 
         /// <summary>
         /// Parameter to provide to close handlers if an close due to click away is instigated.
@@ -392,7 +408,7 @@ namespace MaterialDesignThemes.Wpf
 
         private static void SnackbarMessageQueuePropertyChangedCallback(DependencyObject dependencyObject, DependencyPropertyChangedEventArgs dependencyPropertyChangedEventArgs)
         {
-            var dialogHost = (DialogHost) dependencyObject;
+            var dialogHost = (DialogHost)dependencyObject;
             if (dialogHost._currentSnackbarMessageQueueUnPauseAction != null)
             {
                 dialogHost._currentSnackbarMessageQueueUnPauseAction();
@@ -418,7 +434,7 @@ namespace MaterialDesignThemes.Wpf
 
         public Style PopupStyle
         {
-            get { return (Style) GetValue(PopupStyleProperty); }
+            get { return (Style)GetValue(PopupStyleProperty); }
             set { SetValue(PopupStyleProperty, value); }
         }
 
@@ -431,12 +447,34 @@ namespace MaterialDesignThemes.Wpf
             _popupContentControl = GetTemplateChild(PopupContentPartName) as ContentControl;
             _contentCoverGrid = GetTemplateChild(ContentCoverGridName) as Grid;
 
+            if (_popup != null)
+            {
+                _popup.Opened += PopupOnOpened;
+                _popup.Closed += PopupOnClosed;
+            }
+
             if (_contentCoverGrid != null)
                 _contentCoverGrid.MouseLeftButtonUp += ContentCoverGridOnMouseLeftButtonUp;
 
             VisualStateManager.GoToState(this, SelectState(), false);
-            
+
             base.OnApplyTemplate();
+        }
+
+        private void PopupOnClosed(object sender, EventArgs eventArgs)
+        {
+            _realClosedWaitHandle.Set();
+        }
+
+        private void PopupOnOpened(object sender, EventArgs eventArgs)
+        {
+            _realClosedWaitHandle.Reset();
+        }
+
+        internal async Task<bool> WaitRealClosedInternal(int timeout)
+        {
+            if (_popup != null && !_popup.IsOpen) return true;
+            return await Task.Run(() => _realClosedWaitHandle.WaitOne(timeout));
         }
 
         #region open dialog events/callbacks
@@ -445,8 +483,8 @@ namespace MaterialDesignThemes.Wpf
             EventManager.RegisterRoutedEvent(
                 "DialogOpened",
                 RoutingStrategy.Bubble,
-                typeof (DialogOpenedEventHandler),
-                typeof (DialogHost));
+                typeof(DialogOpenedEventHandler),
+                typeof(DialogHost));
 
         /// <summary>
         /// Raised when a dialog is opened.
@@ -498,8 +536,8 @@ namespace MaterialDesignThemes.Wpf
             EventManager.RegisterRoutedEvent(
                 "DialogClosing",
                 RoutingStrategy.Bubble,
-                typeof (DialogClosingEventHandler),
-                typeof (DialogHost));
+                typeof(DialogClosingEventHandler),
+                typeof(DialogHost));
 
         /// <summary>
         /// Raised just before a dialog is closed.
@@ -514,7 +552,7 @@ namespace MaterialDesignThemes.Wpf
         /// Attached property which can be used on the <see cref="Button"/> which instigated the <see cref="OpenDialogCommand"/> to process the closing event.
         /// </summary>
         public static readonly DependencyProperty DialogClosingAttachedProperty = DependencyProperty.RegisterAttached(
-            "DialogClosingAttached", typeof (DialogClosingEventHandler), typeof (DialogHost), new PropertyMetadata(default(DialogClosingEventHandler)));
+            "DialogClosingAttached", typeof(DialogClosingEventHandler), typeof(DialogHost), new PropertyMetadata(default(DialogClosingEventHandler)));
 
         public static void SetDialogClosingAttached(DependencyObject element, DialogClosingEventHandler value)
         {
@@ -527,7 +565,7 @@ namespace MaterialDesignThemes.Wpf
         }
 
         public static readonly DependencyProperty DialogClosingCallbackProperty = DependencyProperty.Register(
-            nameof(DialogClosingCallback), typeof (DialogClosingEventHandler), typeof (DialogHost), new PropertyMetadata(default(DialogClosingEventHandler)));
+            nameof(DialogClosingCallback), typeof(DialogClosingEventHandler), typeof(DialogHost), new PropertyMetadata(default(DialogClosingEventHandler)));
 
         /// <summary>
         /// Callback fired when the <see cref="DialogClosing"/> event is fired, allowing the event to be processed from a binding/view model.
