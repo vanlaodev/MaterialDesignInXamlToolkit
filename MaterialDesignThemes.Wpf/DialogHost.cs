@@ -307,11 +307,14 @@ namespace MaterialDesignThemes.Wpf
             dialogHost.Dispatcher.BeginInvoke(DispatcherPriority.Background, new Action(() =>
             {
                 CommandManager.InvalidateRequerySuggested();
-                var child = dialogHost.FocusPopup();
+                UIElement child = dialogHost.FocusPopup();
 
-                //https://github.com/ButchersBoy/MaterialDesignInXamlToolkit/issues/187
-                //totally not happy about this, but on immediate validation we can get some weird looking stuff...give WPF a kick to refresh...
-                Task.Delay(300).ContinueWith(t => child.Dispatcher.BeginInvoke(new Action(() => child.InvalidateVisual())));
+                if (child != null)
+                {
+                    //https://github.com/ButchersBoy/MaterialDesignInXamlToolkit/issues/187
+                    //totally not happy about this, but on immediate validation we can get some weird looking stuff...give WPF a kick to refresh...
+                    Task.Delay(300).ContinueWith(t => child.Dispatcher.BeginInvoke(new Action(() => child.InvalidateVisual())));
+                }
             }));
         }
 
@@ -427,6 +430,18 @@ namespace MaterialDesignThemes.Wpf
         {
             get { return (SnackbarMessageQueue)GetValue(SnackbarMessageQueueProperty); }
             set { SetValue(SnackbarMessageQueueProperty, value); }
+        }
+
+        public static readonly DependencyProperty DialogThemeProperty =
+            DependencyProperty.Register(nameof(DialogTheme), typeof(BaseTheme), typeof(DialogHost), new PropertyMetadata(default(BaseTheme)));
+
+        /// <summary>
+        /// Set the theme (light/dark) for the dialog.
+        /// </summary>
+        public BaseTheme DialogTheme
+        {
+            get { return (BaseTheme)GetValue(DialogThemeProperty); }
+            set { SetValue(DialogThemeProperty, value); }
         }
 
         public static readonly DependencyProperty PopupStyleProperty = DependencyProperty.Register(
